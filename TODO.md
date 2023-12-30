@@ -1,0 +1,1 @@
+- Need a newer version of Skupper for Podman support

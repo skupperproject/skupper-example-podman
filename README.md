@@ -1,8 +1,8 @@
-# Skupper Hello World using Docker or Podman
+# Skupper Hello World with Podman
 
-[![main](https://github.com/skupperproject/skupper-example-containers/actions/workflows/main.yaml/badge.svg)](https://github.com/skupperproject/skupper-example-containers/actions/workflows/main.yaml)
+[![main](https://github.com/skupperproject/skupper-example-podman/actions/workflows/main.yaml/badge.svg)](https://github.com/skupperproject/skupper-example-podman/actions/workflows/main.yaml)
 
-#### Connect services running as Docker or Podman containers
+#### Connect services running as Podman containers
 
 This example is part of a [suite of examples][examples] showing the
 different ways you can use [Skupper][website] to connect services
@@ -32,7 +32,7 @@ across cloud providers, data centers, and edge sites.
 
 This example is a basic multi-service HTTP application deployed
 across a Kubernetes cluster and a bare-metal host or VM running
-Docker or Podman containers.
+Podman containers.
 
 It contains two services:
 
@@ -52,8 +52,7 @@ internet.
 
 ## Prerequisites
 
-* A working installation of Docker ([installation
-  guide][install-docker]) or Podman ([installation
+* A working installation of Podman ([installation
   guide][install-podman])
 
 * The `kubectl` command-line tool, version 1.15 or later
@@ -62,7 +61,6 @@ internet.
 * Access to a Kubernetes cluster, from [any provider you
   choose][kube-providers]
 
-[install-docker]: https://docs.docker.com/engine/install/
 [install-podman]: https://podman.io/getting-started/installation
 [install-kubectl]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 [kube-providers]: https://skupper.io/start/kubernetes.html
@@ -102,7 +100,7 @@ Use `kubectl create namespace` to create the namespace you wish
 to use (or use an existing namespace).  Use `kubectl config
 set-context` to set the current namespace for your session.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 kubectl create namespace hello-world
@@ -129,7 +127,7 @@ tunnel`][minikube-tunnel] before you install Skupper.
 
 [minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 skupper init
@@ -149,7 +147,7 @@ The `skupper gateway init` command starts a Skupper router on
 your local system and links it to the Skupper router in the
 current Kubernetes namespace.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 skupper gateway init --type docker
@@ -177,11 +175,10 @@ in `hello-world`.
 Use `docker run` or `podman run` to run the backend service on
 your local machine.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
-docker run --name backend --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
 ~~~
 
 _Sample output:_
@@ -189,7 +186,17 @@ _Sample output:_
 ~~~ console
 $ kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
 deployment.apps/frontend created
+~~~
 
+_**Console for Podman:**_
+
+~~~ shell
+docker run --name backend --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
+~~~
+
+_Sample output:_
+
+~~~ console
 $ docker run --name backend --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
 262dde0287af2c76c3088d9ff4f865f02732a762b0afd91e03ec9e3fe6b03f88
 ~~~
@@ -200,11 +207,10 @@ Use `skupper service create` to define a Skupper service called
 `backend`.  Then use `skupper gateway bind` to attach your
 running backend process as a target for the service.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 skupper service create backend 8080
-skupper gateway bind backend localhost 8080
 ~~~
 
 _Sample output:_
@@ -212,7 +218,17 @@ _Sample output:_
 ~~~ console
 $ skupper service create backend 8080
 
+~~~
 
+_**Console for Podman:**_
+
+~~~ shell
+skupper gateway bind backend localhost 8080
+~~~
+
+_Sample output:_
+
+~~~ console
 $ skupper gateway bind backend localhost 8080
 2022/09/08 07:07:00 CREATE io.skupper.router.tcpConnector fancypants-jross-egress-backend:8080 map[address:backend:8080 host:localhost name:fancypants-jross-egress-backend:8080 port:8080 siteId:d187db66-cbda-43fe-ac3b-4be22bbad1c9]
 ~~~
@@ -228,7 +244,7 @@ the frontend.
 Use `kubectl expose` with `--type LoadBalancer` to open network
 access to the frontend service.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 kubectl expose deployment/frontend --port 8080 --type LoadBalancer
@@ -251,7 +267,7 @@ that address.
 **Note:** The `<external-ip>` field in the following commands is a
 placeholder.  The actual value is an IP address.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 kubectl get service/frontend
@@ -284,7 +300,7 @@ password.
 following output are placeholders.  The actual values are specific
 to your environment.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
 skupper status
@@ -295,7 +311,7 @@ _Sample output:_
 
 ~~~ console
 $ skupper status
-Skupper is enabled for namespace "hello-world" in interior mode. It is connected to 1 other site. It has 1 exposed service.
+Skupper is enabled for namespace "hello-world". It is connected to 1 other site. It has 1 exposed service.
 The site console url is: <console-url>
 The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
 
@@ -311,14 +327,17 @@ in as user `admin` and enter the password.
 To remove Skupper and the other resources from this exercise, use
 the following commands.
 
-_**Console for hello-world:**_
+_**Console for Kubernetes:**_
 
 ~~~ shell
-docker stop backend
-skupper gateway delete
 skupper delete
-kubectl delete service/frontend
-kubectl delete deployment/frontend
+~~~
+
+_**Console for Podman:**_
+
+~~~ shell
+skupper delete
+podman stop backend
 ~~~
 
 ## Next steps
