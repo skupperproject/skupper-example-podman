@@ -74,7 +74,7 @@ steps:
   - title: Set up your Podman environment
     commands:
       podman:
-        - run: systemctl --user enable --now podman.socket
+        - run: podman system service --time 0 unix:///run/user/1001/podman/podman.sock &
   - title: Install Skupper in your sites
     commands:
       kubernetes:
@@ -140,4 +140,3 @@ steps:
         - run: kubectl delete deployment/frontend
       podman:
         - run: skupper delete
-        - run: podman stop --network skupper backend-target
