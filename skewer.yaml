@@ -80,6 +80,8 @@ steps:
       kubernetes:
         - run: skupper init --enable-console --enable-flow-collector
       podman:
+        - run: ls -la $XDG_RUNTIME_DIR
+        - run: ls -la $XDG_RUNTIME_DIR/podman
         - run: skupper init --ingress none
   - title: Link your sites
     commands:
@@ -89,8 +91,8 @@ steps:
         - run: skupper link create ~/secret.token
   - title: Deploy the frontend and backend services
     preamble: |
-      For this example, we are running the frontend on Kubernetes and
-      the backend as a local Podman container.
+      This example runs the frontend on Kubernetes and the backend as
+      a local Podman container.
 
       Use `kubectl create deployment` to deploy the frontend service
       in `hello-world`.

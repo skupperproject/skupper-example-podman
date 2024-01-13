@@ -136,7 +136,7 @@ Context "minikube" modified.
 _**Console for Podman:**_
 
 ~~~ shell
-systemctl --user enable --now podman.socket
+podman system service --time=0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
 ~~~
 
 ## Step 6: Install Skupper in your sites
@@ -169,8 +169,8 @@ skupper link create ~/secret.token
 
 ## Step 8: Deploy the frontend and backend services
 
-For this example, we are running the frontend on Kubernetes and
-the backend as a local Podman container.
+This example runs the frontend on Kubernetes and the backend as
+a local Podman container.
 
 Use `kubectl create deployment` to deploy the frontend service
 in `hello-world`.
@@ -264,7 +264,6 @@ _**Console for Podman:**_
 
 ~~~ shell
 skupper delete
-podman stop --network skupper backend-target
 ~~~
 
 ## Next steps
