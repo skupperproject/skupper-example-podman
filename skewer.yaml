@@ -1,6 +1,6 @@
-title: Skupper Hello World with Podman
+title: Skupper Hello World using Podman
 subtitle: Connect services running as Podman containers
-github_actions_url: https://github.com/skupperproject/skupper-example-podman/actions/workflows/main.yaml
+github_actions_url: https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml
 overview: |
   This example is a basic multi-service HTTP application deployed
   across a Kubernetes cluster and a bare-metal host or VM running
@@ -38,11 +38,15 @@ sites:
   kubernetes:
     title: Kubernetes
     platform: kubernetes
-    kubeconfig: ~/.kube/config-hello-world
     namespace: hello-world
+    env:
+      SKUPPER_PLATFORM: kubernetes
+      KUBECONFIG: ~/.kube/config-hello-world
   podman:
     title: Podman
     platform: podman
+    env:
+      SKUPPER_PLATFORM: podman
 steps:
   - standard: install_the_skupper_command_line_tool
   - title: Access your Kubernetes cluster
@@ -73,15 +77,21 @@ steps:
       [minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
     commands:
       kubernetes:
-        - run: skupper init
+        - run: skupper init --enable-console --enable-flow-collector
   - title: Install Skupper in your Podman network
     commands:
       podman:
-        - run: skupper init
+        - run: skupper init --ingress none
+  - title: Link your sites
+    commands:
+      kubernetes:
+        - run: skupper token create ~/secret.token
+      podman:
+        - run: skupper link create ~/secret.token
   - title: Deploy the frontend and backend services
     preamble: |
       For this example, we are running the frontend on Kubernetes and
-      the backend as a local Docker or Podman container.
+      the backend as a local Podman container.
 
       Use `kubectl create deployment` to deploy the frontend service
       in `hello-world`.
@@ -93,7 +103,7 @@ steps:
         - run: kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
           output: deployment.apps/frontend created
       podman:
-        - run: docker run --name backend --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
+        - run: podman run --name backend-target --network skupper --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
           output: |
             262dde0287af2c76c3088d9ff4f865f02732a762b0afd91e03ec9e3fe6b03f88
   - title: Expose the backend service
@@ -104,12 +114,10 @@ steps:
     commands:
       kubernetes:
         - run: skupper service create backend 8080
-          output: ""
         - await: service/backend
       podman:
-        - run: skupper gateway bind backend localhost 8080
-          output: |
-            2022/09/08 07:07:00 CREATE io.skupper.router.tcpConnector fancypants-jross-egress-backend:8080 map[address:backend:8080 host:localhost name:fancypants-jross-egress-backend:8080 port:8080 siteId:d187db66-cbda-43fe-ac3b-4be22bbad1c9]
+        - run: skupper service create backend 8080
+        - run: skupper service bind backend host backend-target --target-port 8080
   - title: Expose the frontend service
     preamble: |
       We have established connectivity between the Kubernetes
@@ -125,14 +133,17 @@ steps:
         - await: deployment/frontend
         - run: kubectl expose deployment/frontend --port 8080 --type LoadBalancer
           output: service/frontend exposed
-  - standard: test_the_application
-  - standard: accessing_the_web_console
+  # - title: Wait!
+  #   commands:
+  #     kubernetes:
+  #       - run: sleep 86400
+  # - standard: test_the_application
   - standard: cleaning_up
     commands:
       kubernetes:
         - run: skupper delete
-        # - run: kubectl delete service/frontend
-        # - run: kubectl delete deployment/frontend
+        - run: kubectl delete service/frontend
+        - run: kubectl delete deployment/frontend
       podman:
         - run: skupper delete
-        - run: podman stop backend
+        - run: podman stop backend-target
