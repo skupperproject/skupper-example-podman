@@ -136,7 +136,7 @@ Context "minikube" modified.
 _**Console for Podman:**_
 
 ~~~ shell
-podman system service --time=0 unix:///tmp/podman.sock &
+systemctl --user enable --now podman.socket
 ~~~
 
 ## Step 6: Install Skupper in your sites
