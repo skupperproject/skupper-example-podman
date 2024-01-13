@@ -17,13 +17,14 @@ across cloud providers, data centers, and edge sites.
 * [Prerequisites](#prerequisites)
 * [Step 1: Install the Skupper command-line tool](#step-1-install-the-skupper-command-line-tool)
 * [Step 2: Access your Kubernetes cluster](#step-2-access-your-kubernetes-cluster)
-* [Step 3: Set up your Kubernetes namespace](#step-3-set-up-your-kubernetes-namespace)
-* [Step 4: Install Skupper in your Kubernetes namespace](#step-4-install-skupper-in-your-kubernetes-namespace)
-* [Step 5: Install Skupper in your Podman network](#step-5-install-skupper-in-your-podman-network)
-* [Step 6: Link your sites](#step-6-link-your-sites)
-* [Step 7: Deploy the frontend and backend services](#step-7-deploy-the-frontend-and-backend-services)
-* [Step 8: Expose the backend service](#step-8-expose-the-backend-service)
-* [Step 9: Expose the frontend service](#step-9-expose-the-frontend-service)
+* [Step 3: Configure separate console sessions](#step-3-configure-separate-console-sessions)
+* [Step 4: Set up your Kubernetes namespace](#step-4-set-up-your-kubernetes-namespace)
+* [Step 5: Set up your Podman environment](#step-5-set-up-your-podman-environment)
+* [Step 6: Install Skupper in your sites](#step-6-install-skupper-in-your-sites)
+* [Step 7: Link your sites](#step-7-link-your-sites)
+* [Step 8: Deploy the frontend and backend services](#step-8-deploy-the-frontend-and-backend-services)
+* [Step 9: Expose the backend service](#step-9-expose-the-backend-service)
+* [Step 10: Expose the frontend service](#step-10-expose-the-frontend-service)
 * [Cleaning up](#cleaning-up)
 * [About this example](#about-this-example)
 
@@ -93,7 +94,21 @@ provider. [Find the instructions for your chosen
 provider][kube-providers] and use them to authenticate and
 configure access.
 
-## Step 3: Set up your Kubernetes namespace
+## Step 3: Configure separate console sessions
+
+_**Console for Kubernetes:**_
+
+~~~ shell
+export KUBECONFIG=@kubeconfig@
+~~~
+
+_**Console for Podman:**_
+
+~~~ shell
+export SKUPPER_PLATFORM=podman
+~~~
+
+## Step 4: Set up your Kubernetes namespace
 
 Use `kubectl create namespace` to create the namespace you wish
 to use (or use an existing namespace).  Use `kubectl config
@@ -116,15 +131,15 @@ $ kubectl config set-context --current --namespace hello-world
 Context "minikube" modified.
 ~~~
 
-## Step 4: Install Skupper in your Kubernetes namespace
+## Step 5: Set up your Podman environment
 
-The `skupper init` command installs the Skupper router and service
-controller in the current namespace.
+_**Console for Podman:**_
 
-**Note:** If you are using Minikube, [you need to start `minikube
-tunnel`][minikube-tunnel] before you install Skupper.
+~~~ shell
+podman system service --time=0 unix:///tmp/podman.sock &
+~~~
 
-[minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
+## Step 6: Install Skupper in your sites
 
 _**Console for Kubernetes:**_
 
@@ -132,15 +147,13 @@ _**Console for Kubernetes:**_
 skupper init --enable-console --enable-flow-collector
 ~~~
 
-## Step 5: Install Skupper in your Podman network
-
 _**Console for Podman:**_
 
 ~~~ shell
 skupper init --ingress none
 ~~~
 
-## Step 6: Link your sites
+## Step 7: Link your sites
 
 _**Console for Kubernetes:**_
 
@@ -154,7 +167,7 @@ _**Console for Podman:**_
 skupper link create ~/secret.token
 ~~~
 
-## Step 7: Deploy the frontend and backend services
+## Step 8: Deploy the frontend and backend services
 
 For this example, we are running the frontend on Kubernetes and
 the backend as a local Podman container.
@@ -191,7 +204,7 @@ $ podman run --name backend-target --network skupper --detach --rm -p 8080:8080 
 262dde0287af2c76c3088d9ff4f865f02732a762b0afd91e03ec9e3fe6b03f88
 ~~~
 
-## Step 8: Expose the backend service
+## Step 9: Expose the backend service
 
 Use `skupper service create` to define a Skupper service called
 `backend`.  Then use `skupper gateway bind` to attach your
@@ -210,7 +223,7 @@ skupper service create backend 8080
 skupper service bind backend host backend-target --target-port 8080
 ~~~
 
-## Step 9: Expose the frontend service
+## Step 10: Expose the frontend service
 
 We have established connectivity between the Kubernetes
 namespace and the your local machine, and we've made the backend
@@ -251,7 +264,7 @@ _**Console for Podman:**_
 
 ~~~ shell
 skupper delete
-podman stop backend-target
+podman stop --network skupper backend-target
 ~~~
 
 ## Next steps

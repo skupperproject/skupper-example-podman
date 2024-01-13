@@ -40,7 +40,6 @@ sites:
     platform: kubernetes
     namespace: hello-world
     env:
-      SKUPPER_PLATFORM: kubernetes
       KUBECONFIG: ~/.kube/config-hello-world
   podman:
     title: Podman
@@ -55,6 +54,12 @@ steps:
       provider. [Find the instructions for your chosen
       provider][kube-providers] and use them to authenticate and
       configure access.
+  - title: Configure separate console sessions
+    commands:
+      kubernetes:
+        - run: export KUBECONFIG=@kubeconfig@
+      podman:
+        - run: export SKUPPER_PLATFORM=podman
   - title: Set up your Kubernetes namespace
     preamble: |
       Use `kubectl create namespace` to create the namespace you wish
@@ -66,20 +71,14 @@ steps:
           output: namespace/hello-world created
         - run: kubectl config set-context --current --namespace hello-world
           output: Context "minikube" modified.
-  - title: Install Skupper in your Kubernetes namespace
-    preamble: |
-      The `skupper init` command installs the Skupper router and service
-      controller in the current namespace.
-
-      **Note:** If you are using Minikube, [you need to start `minikube
-      tunnel`][minikube-tunnel] before you install Skupper.
-
-      [minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
+  - title: Set up your Podman environment
+    commands:
+      podman:
+        - run: podman system service --time=0 unix:///tmp/podman.sock &
+  - title: Install Skupper in your sites
     commands:
       kubernetes:
         - run: skupper init --enable-console --enable-flow-collector
-  - title: Install Skupper in your Podman network
-    commands:
       podman:
         - run: skupper init --ingress none
   - title: Link your sites
@@ -133,11 +132,6 @@ steps:
         - await: deployment/frontend
         - run: kubectl expose deployment/frontend --port 8080 --type LoadBalancer
           output: service/frontend exposed
-  # - title: Wait!
-  #   commands:
-  #     kubernetes:
-  #       - run: sleep 86400
-  # - standard: test_the_application
   - standard: cleaning_up
     commands:
       kubernetes:
@@ -146,4 +140,4 @@ steps:
         - run: kubectl delete deployment/frontend
       podman:
         - run: skupper delete
-        - run: podman stop backend-target
+        - run: podman stop --network skupper backend-target
