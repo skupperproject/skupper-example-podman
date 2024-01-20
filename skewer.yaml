@@ -1,6 +1,6 @@
 title: Skupper Hello World using Podman
 subtitle: Connect services running as Podman containers
-github_actions_url: https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml
+workflow: null
 overview: |
   This example is a basic multi-service HTTP application deployed
   across a Kubernetes cluster and a bare-metal host or VM running
@@ -80,8 +80,6 @@ steps:
       kubernetes:
         - run: skupper init --enable-console --enable-flow-collector
       podman:
-        - run: ls -la $XDG_RUNTIME_DIR
-        - run: ls -la $XDG_RUNTIME_DIR/podman
         - run: skupper init --ingress none
   - title: Link your sites
     commands:
@@ -89,7 +87,7 @@ steps:
         - run: skupper token create ~/secret.token
       podman:
         - run: skupper link create ~/secret.token
-  - title: Deploy the frontend and backend services
+  - title: Deploy the application
     preamble: |
       This example runs the frontend on Kubernetes and the backend as
       a local Podman container.
@@ -115,25 +113,10 @@ steps:
     commands:
       kubernetes:
         - run: skupper service create backend 8080
-        - await: service/backend
       podman:
         - run: skupper service create backend 8080
         - run: skupper service bind backend host backend-target --target-port 8080
-  - title: Expose the frontend service
-    preamble: |
-      We have established connectivity between the Kubernetes
-      namespace and the your local machine, and we've made the backend
-      in `hello-world` available to the frontend running as container.
-      Before we can test the application, we need external access to
-      the frontend.
-
-      Use `kubectl expose` with `--type LoadBalancer` to open network
-      access to the frontend service.
-    commands:
-      kubernetes:
-        - await: deployment/frontend
-        - run: kubectl expose deployment/frontend --port 8080 --type LoadBalancer
-          output: service/frontend exposed
+  - standard: hello_world/test_the_application
   - standard: cleaning_up
     commands:
       kubernetes:

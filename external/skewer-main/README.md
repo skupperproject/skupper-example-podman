@@ -10,9 +10,9 @@ and produces two outputs: a `README.md` file and a test routine.
 
 ## An example example
 
-[Example `skewer.yaml` file](test-example/skewer.yaml)
+[Example `skewer.yaml` file](example/skewer.yaml)
 
-[Example `README.md` output](test-example/README.md)
+[Example `README.md` output](example/README.md)
 
 ## Setting up Skewer for your own example
 
@@ -21,26 +21,28 @@ use the [Skupper example template][template] as a starting point.
 
 [template]: https://github.com/skupperproject/skupper-example-template
 
-Add the Skewer code as a subdirectory in your example project:
+Change directory to the root of your example project:
 
     cd <project-dir>/
+
+Add the Skewer code as a subdirectory in your example project:
+
     mkdir -p external
     curl -sfL https://github.com/skupperproject/skewer/archive/main.tar.gz | tar -C external -xz
 
-Symlink the Skewer library into your `python` directory:
+Symlink the Skewer and Plano libraries into your `python` directory:
 
     mkdir -p python
     ln -s ../external/skewer-main/python/skewer python/skewer
+    ln -s ../external/skewer-main/python/plano python/plano
 
-Symlink the `plano` command into the root of your project.  Symlink
-the standard `.plano.py` and `.gitignore` files as well.
+Copy the `plano` command into the root of your project:
 
-    ln -s external/skewer-main/plano
-    ln -s external/skewer-main/config/.plano.py
+    cp external/skewer-main/plano plano
 
-Copy the standard `.gitignore` and GitHub Actions workflow file into
-your project:
+Copy the standard config files and workflow file into your project:
 
+    cp external/skewer-main/config/.plano.py .plano.py
     cp external/skewer-main/config/.gitignore .gitignore
 
     mkdir -p .github/workflows
@@ -74,11 +76,10 @@ options:
 commands:
   {command}
     generate            Generate README.md from the data in skewer.yaml
-    render              Render README.html from the data in skewer.yaml
+    render              Render README.html from README.md
     clean               Clean up the source tree
-    run                 Run the example steps using Minikube
-    run-external        Run the example steps with user-provided kubeconfigs
-    demo                Run the example steps and pause before cleaning up
+    run                 Run the example steps
+    demo                Run the example steps and pause for a demo before cleaning up
     test                Test README generation and run the steps on Minikube
     update-skewer       Update the embedded Skewer repo and GitHub workflow
 ~~~
@@ -90,7 +91,7 @@ The top level:
 ~~~ yaml
 title:              # Your example's title (required)
 subtitle:           # Your chosen subtitle (required)
-github_actions_url: # The URL of your workflow (optional)
+workflow:           # The filename of your GitHub workflow (optional, default 'main.yaml')
 overview:           # Text introducing your example (optional)
 prerequisites:      # Text describing prerequisites (optional, has default text)
 sites:              # A map of named sites (see below)
@@ -198,15 +199,25 @@ steps:
   - standard: check_the_status_of_your_namespaces
   - standard: link_your_namespaces
   <your-custom-steps>
-  - standard: test_the_application
   - standard: accessing_the_web_console
   - standard: cleaning_up
 ~~~
 
-Note that the `link_your_namespaces` and `test_the_application` steps
-are less generic than the other steps, so check that the text and
-commands they produce are doing what you need.  If not, you'll need to
+Note that the `link_your_namespaces` step is less generic than the
+other steps (it assumes only two sites), so check that the text and
+commands it produces are doing what you need.  If not, you'll need to
 provide a custom step.
+
+There are also some standard steps for examples based on the Skupper
+Hello World application:
+
+~~~ yaml
+steps:
+  - standard: hello_world/deploy_the_application
+  - standard: hello_world/expose_the_backend_service
+  - standard: hello_world/test_the_application
+  - standard: hello_world/cleaning_up
+~~~
 
 The step commands are separated into named groups corresponding to the
 sites.  Each named group contains a list of command entries.  Each

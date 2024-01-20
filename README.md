@@ -1,7 +1,5 @@
 # Skupper Hello World using Podman
 
-[![main](https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml/badge.svg)](https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml)
-
 #### Connect services running as Podman containers
 
 This example is part of a [suite of examples][examples] showing the
@@ -22,10 +20,12 @@ across cloud providers, data centers, and edge sites.
 * [Step 5: Set up your Podman environment](#step-5-set-up-your-podman-environment)
 * [Step 6: Install Skupper in your sites](#step-6-install-skupper-in-your-sites)
 * [Step 7: Link your sites](#step-7-link-your-sites)
-* [Step 8: Deploy the frontend and backend services](#step-8-deploy-the-frontend-and-backend-services)
+* [Step 8: Deploy the application](#step-8-deploy-the-application)
 * [Step 9: Expose the backend service](#step-9-expose-the-backend-service)
-* [Step 10: Expose the frontend service](#step-10-expose-the-frontend-service)
+* [Step 10: Test the application](#step-10-test-the-application)
 * [Cleaning up](#cleaning-up)
+* [Summary](#summary)
+* [Next steps](#next-steps)
 * [About this example](#about-this-example)
 
 ## Overview
@@ -84,8 +84,8 @@ prompts you to add the command to your path if necessary.
 For Windows and other installation options, see [Installing
 Skupper][install-docs].
 
-[install-script]: https://github.com/skupperproject/skupper-website/blob/main/docs/install.sh
-[install-docs]: https://skupper.io/install/index.html
+[install-script]: https://github.com/skupperproject/skupper-website/blob/main/input/install.sh
+[install-docs]: https://skupper.io/install/
 
 ## Step 2: Access your Kubernetes cluster
 
@@ -167,7 +167,7 @@ _**Console for Podman:**_
 skupper link create ~/secret.token
 ~~~
 
-## Step 8: Deploy the frontend and backend services
+## Step 8: Deploy the application
 
 This example runs the frontend on Kubernetes and the backend as
 a local Podman container.
@@ -223,21 +223,31 @@ skupper service create backend 8080
 skupper service bind backend host backend-target --target-port 8080
 ~~~
 
-## Step 10: Expose the frontend service
+## Step 10: Test the application
 
-We have established connectivity between the Kubernetes
-namespace and the your local machine, and we've made the backend
-in `hello-world` available to the frontend running as container.
-Before we can test the application, we need external access to
-the frontend.
+We have established connectivity between the two namespaces and
+made the backend available to the frontend.  Before we can test
+the application, we need external access to the frontend.
 
 Use `kubectl expose` with `--type LoadBalancer` to open network
 access to the frontend service.
+
+Once the frontend is exposed, use `kubectl get service/frontend`
+to look up the external IP of the frontend service.  If the
+external IP is `<pending>`, try again after a moment.
+
+Once you have the external IP, use `curl` or a similar tool to
+request the `/api/health` endpoint at that address.
+
+**Note:** The `<external-ip>` field in the following commands is a
+placeholder.  The actual value is an IP address.
 
 _**Console for Kubernetes:**_
 
 ~~~ shell
 kubectl expose deployment/frontend --port 8080 --type LoadBalancer
+kubectl get service/frontend
+curl http://<external-ip>:8080/api/health
 ~~~
 
 _Sample output:_
@@ -245,7 +255,17 @@ _Sample output:_
 ~~~ console
 $ kubectl expose deployment/frontend --port 8080 --type LoadBalancer
 service/frontend exposed
+
+$ kubectl get service/frontend
+NAME       TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)          AGE
+frontend   LoadBalancer   10.103.232.28   <external-ip>   8080:30407/TCP   15s
+
+$ curl http://<external-ip>:8080/api/health
+OK
 ~~~
+
+If everything is in order, you can now access the web interface by
+navigating to `http://<external-ip>:8080/` in your browser.
 
 ## Cleaning up
 
