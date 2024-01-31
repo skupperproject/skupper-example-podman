@@ -48,46 +48,11 @@ sites:
       SKUPPER_PLATFORM: podman
 steps:
   - standard: install_the_skupper_command_line_tool
-  - title: Access your Kubernetes cluster
-    preamble: |
-      The procedure for accessing a Kubernetes cluster varies by
-      provider. [Find the instructions for your chosen
-      provider][kube-providers] and use them to authenticate and
-      configure access.
-  - title: Configure separate console sessions
-    commands:
-      kubernetes:
-        - run: export KUBECONFIG=@kubeconfig@
-      podman:
-        - run: export SKUPPER_PLATFORM=podman
-  - title: Set up your Kubernetes namespace
-    preamble: |
-      Use `kubectl create namespace` to create the namespace you wish
-      to use (or use an existing namespace).  Use `kubectl config
-      set-context` to set the current namespace for your session.
-    commands:
-      kubernetes:
-        - run: kubectl create namespace hello-world
-          output: namespace/hello-world created
-        - run: kubectl config set-context --current --namespace hello-world
-          output: Context "minikube" modified.
-  - title: Set up your Podman environment
-    commands:
-      podman:
-        - run: podman system service --time=0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
-  - title: Install Skupper in your sites
-    commands:
-      kubernetes:
-        - run: skupper init --enable-console --enable-flow-collector
-      podman:
-        - run: skupper init --ingress none
-  - title: Link your sites
-    commands:
-      kubernetes:
-        - run: skupper token create ~/secret.token
-      podman:
-        - run: skupper link create ~/secret.token
-  - title: Deploy the application
+  - standard: set_up_your_kubeconfigs
+  - standard: set_up_your_kubernetes_sites
+  - standard: set_up_your_podman_site
+  - standard: link_your_sites
+  - title: Deploy the application workloads
     preamble: |
       This example runs the frontend on Kubernetes and the backend as
       a local Podman container.
@@ -100,23 +65,24 @@ steps:
     commands:
       kubernetes:
         - run: kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
-          output: deployment.apps/frontend created
       podman:
         - run: podman run --name backend-target --network skupper --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
-          output: |
-            262dde0287af2c76c3088d9ff4f865f02732a762b0afd91e03ec9e3fe6b03f88
   - title: Expose the backend service
     preamble: |
+      XXX
+
       Use `skupper service create` to define a Skupper service called
       `backend`.  Then use `skupper gateway bind` to attach your
       running backend process as a target for the service.
+
+      XXX
     commands:
       kubernetes:
         - run: skupper service create backend 8080
       podman:
         - run: skupper service create backend 8080
         - run: skupper service bind backend host backend-target --target-port 8080
-  - standard: hello_world/test_the_application
+  - standard: access_the_application
   - standard: cleaning_up
     commands:
       kubernetes:
