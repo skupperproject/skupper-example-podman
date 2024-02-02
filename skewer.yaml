@@ -98,6 +98,13 @@ steps:
       any time to check your progress.
   - standard: link_your_sites
   - title: Expose the backend
+    preamble: |
+      In Kubernetes, use `skupper service create` to create a service
+      called `backend`.
+
+      In Podman, use `skupper service create` to create the same
+      service.  Use `skupper service bind` to attach your running
+      backend process as a target for the service.
     commands:
       kubernetes:
         - run: skupper service create backend 8080

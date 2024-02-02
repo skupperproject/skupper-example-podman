@@ -114,8 +114,8 @@ kubectl config set-context --current --namespace hello-world
 ## Step 3: Set up your Podman network
 
 Open a new terminal window and set the `SKUPPER_PLATFORM`
-environment variable to `podman`.  This sets the Skupper command
-platform to `podman` for this terminal session.
+environment variable to `podman`.  This sets the Skupper platform
+to Podman for this terminal session.
 
 Use `podman network create` to create the Podman network that
 Skupper will use.
@@ -127,7 +127,7 @@ _**Podman:**_
 ~~~ shell
 export SKUPPER_PLATFORM=podman
 podman network create skupper
-podman system service --time=0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
+systemctl --user enable --now podman.socket
 ~~~
 
 If `systemctl` is not available, you can also use the following command:
@@ -261,6 +261,13 @@ default, tokens expire after a single use or 15 minutes after
 creation.
 
 ## Step 7: Expose the backend
+
+In Kubernetes, use `skupper service create` to create a service
+called `backend`.
+
+In Podman, use `skupper service create` to create the same
+service.  Use `skupper service bind` to attach your running
+backend process as a target for the service.
 
 _**Kubernetes:**_
 
