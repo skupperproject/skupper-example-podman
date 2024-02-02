@@ -127,7 +127,7 @@ _**Podman:**_
 ~~~ shell
 export SKUPPER_PLATFORM=podman
 podman network create skupper
-systemctl --user enable --now podman.socket
+podman system service --time=0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
 ~~~
 
 If `systemctl` is not available, you can also use the following command:
