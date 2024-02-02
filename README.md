@@ -1,5 +1,7 @@
 # Skupper Hello World using Podman
 
+[![main](https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml/badge.svg)](https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml)
+
 #### Connect services running as Podman containers
 
 This example is part of a [suite of examples][examples] showing the
@@ -14,13 +16,13 @@ across cloud providers, data centers, and edge sites.
 * [Overview](#overview)
 * [Prerequisites](#prerequisites)
 * [Step 1: Install the Skupper command-line tool](#step-1-install-the-skupper-command-line-tool)
-* [Step 2: Set up your kubeconfigs](#step-2-set-up-your-kubeconfigs)
-* [Step 3: Set up your Kubernetes sites](#step-3-set-up-your-kubernetes-sites)
-* [Step 4: Set up your Podman site](#step-4-set-up-your-podman-site)
-* [Step 5: Link your sites](#step-5-link-your-sites)
-* [Step 6: Deploy the application workloads](#step-6-deploy-the-application-workloads)
-* [Step 7: Expose the backend service](#step-7-expose-the-backend-service)
-* [Step 8: Access the application](#step-8-access-the-application)
+* [Step 2: Set up your Kubernetes namespace](#step-2-set-up-your-kubernetes-namespace)
+* [Step 3: Set up your Podman network](#step-3-set-up-your-podman-network)
+* [Step 4: Deploy the frontend and backend](#step-4-deploy-the-frontend-and-backend)
+* [Step 5: Create your sites](#step-5-create-your-sites)
+* [Step 6: Link your sites](#step-6-link-your-sites)
+* [Step 7: Expose the backend](#step-7-expose-the-backend)
+* [Step 8: Access the frontend](#step-8-access-the-frontend)
 * [Cleaning up](#cleaning-up)
 * [Summary](#summary)
 * [Next steps](#next-steps)
@@ -65,9 +67,9 @@ internet.
 
 ## Step 1: Install the Skupper command-line tool
 
-The `skupper` command-line tool is the entrypoint for installing
-and configuring Skupper.  You need to install the `skupper`
-command only once for each development environment.
+This example uses the Skupper command-line tool to deploy Skupper.
+You need to install the `skupper` command only once for each
+development environment.
 
 On Linux or Mac, you can use the install script (inspect it
 [here][install-script]) to download and extract the command:
@@ -85,37 +87,14 @@ Skupper][install-docs].
 [install-script]: https://github.com/skupperproject/skupper-website/blob/main/input/install.sh
 [install-docs]: https://skupper.io/install/
 
-## Step 2: Set up your kubeconfigs
+## Step 2: Set up your Kubernetes namespace
 
-Skupper is designed for use with multiple namespaces, usually on
-different clusters.  The `skupper` and `kubectl` commands use your
-[kubeconfig][kubeconfig] and current context to select the
-namespace where they operate.
+Open a new terminal window and log in to your cluster.  Then
+create the namespace you wish to use and set the namespace on your
+current context.
 
-[kubeconfig]: https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/
-
-Your kubeconfig is stored in a file in your home directory.  The
-`skupper` and `kubectl` commands use the `KUBECONFIG` environment
-variable to locate it.
-
-A single kubeconfig supports only one active context per user.
-Since you will be using multiple contexts at once in this
-exercise, you need to create distinct kubeconfigs.
-
-For each namespace, open a new terminal window.  In each
-terminal, set the `KUBECONFIG` environment variable to a different
-path and log in to your cluster.
-
-_**Kubernetes:**_
-
-~~~ shell
-export KUBECONFIG=~/.kube/config-hello-world
-# Enter your provider-specific login command
-
-~~~
-
-The login procedure varies by provider.  See the documentation for
-your chosen providers:
+**Note:** The login procedure varies by provider.  See the
+documentation for your chosen providers:
 
 * [Minikube](https://skupper.io/start/minikube.html#cluster-access)
 * [Amazon Elastic Kubernetes Service (EKS)](https://skupper.io/start/eks.html#cluster-access)
@@ -124,23 +103,84 @@ your chosen providers:
 * [IBM Kubernetes Service](https://skupper.io/start/ibmks.html#cluster-access)
 * [OpenShift](https://skupper.io/start/openshift.html#cluster-access)
 
-## Step 3: Set up your Kubernetes sites
+_**Kubernetes:**_
 
-For each site, create the namespace you wish to use (or use an
-existing namespace).  Set the namespace on your current context.
-Use `skupper init` to install Skupper in the current namespace.
+~~~ shell
+# Enter your provider-specific login command
+kubectl create namespace hello-world
+kubectl config set-context --current --namespace hello-world
+~~~
+
+## Step 3: Set up your Podman network
+
+Open a new terminal window and set the `SKUPPER_PLATFORM`
+environment variable to `podman`.  This sets the Skupper command
+platform to `podman` for this terminal session.
+
+Use `podman network create` to create the Podman network that
+Skupper will use.
+
+Use `systemctl` to enable the Podman API service.
+
+_**Podman:**_
+
+~~~ shell
+export SKUPPER_PLATFORM=podman
+podman network create skupper
+systemctl --user enable --now podman.socket
+~~~
+
+If `systemctl` is not available, you can also use the following command:
+
+~~~
+podman system service --time=0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
+~~~
+
+## Step 4: Deploy the frontend and backend
+
+This example runs the frontend on Kubernetes and the backend as
+a local Podman container.
+
+Use `kubectl create deployment` to deploy the frontend service
+in namespace `hello-world`.
+
+Use `podman run` to start the backend service on your local
+machine.
+
+_**Kubernetes:**_
+
+~~~ shell
+kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
+~~~
+
+_**Podman:**_
+
+~~~ shell
+podman run --name backend-target --network skupper --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
+~~~
+
+## Step 5: Create your sites
+
+A Skupper _site_ is a location where components of your
+application are running.  Sites are linked together to form a
+Skupper network for your application.
+
+In Kubernetes, use `skupper init` to create a site.  This
+deploys the Skupper router and controller.  Then use `skupper
+status` to see the outcome.
+
+In Podman, use `skupper init` with the option `--ingress none`
+and use `skupper status` to see the result.
 
 **Note:** If you are using Minikube, you need to [start minikube
-tunnel][minikube-tunnel] before you install Skupper.
+tunnel][minikube-tunnel] before you run `skupper init`.
 
 [minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
 
 _**Kubernetes:**_
 
 ~~~ shell
-kubectl create namespace hello-world
-kubectl config set-context --current --namespace hello-world
-skupper init --enable-console --enable-flow-collector
+skupper init
 ~~~
 
 _Sample output:_
@@ -149,34 +189,12 @@ _Sample output:_
 $ skupper init
 Waiting for LoadBalancer IP or hostname...
 Waiting for status...
-Skupper is now installed in namespace '<namespace>'.  Use 'skupper status' to get more information.
+Skupper is now installed in namespace 'hello-world'.  Use 'skupper status' to get more information.
 ~~~
-
-## Step 4: Set up your Podman site
-
-Open a new terminal window and set the `SKUPPER_PLATFORM`
-environment variable to `podman`.
-
-Make sure the Podman API service is available.  On most systems
-you can use:
-
-~~~
-systemctl --user enable --now podman.socket
-~~~
-
-You can also use:
-
-~~~
-podman system service --time=0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
-~~~
-
-Then use `skupper init` to install Skupper in your Podman environment.
 
 _**Podman:**_
 
 ~~~ shell
-export SKUPPER_PLATFORM=podman
-systemctl --user enable --now podman.socket
 skupper init --ingress none
 ~~~
 
@@ -184,10 +202,14 @@ _Sample output:_
 
 ~~~ console
 $ skupper init --ingress none
+It is recommended to enable lingering for jross, otherwise Skupper may not start on boot.
 Skupper is now installed for user 'jross'.  Use 'skupper status' to get more information.
 ~~~
 
-## Step 5: Link your sites
+As you move through the steps below, you can use `skupper status` at
+any time to check your progress.
+
+## Step 6: Link your sites
 
 Creating a link requires use of two `skupper` commands in
 conjunction, `skupper token create` and `skupper link create`.
@@ -202,9 +224,9 @@ that generated it.
 token can link to your site.  Make sure that only those you trust
 have access to it.
 
-First, use `skupper token create` in one site to generate the
-token.  Then, use `skupper link create` in another to link the two
-sites.
+First, use `skupper token create` in site Kubernetes to generate the
+token.  Then, use `skupper link create` in site Podman to link
+the sites.
 
 _**Kubernetes:**_
 
@@ -238,38 +260,7 @@ to use `scp` or a similar tool to transfer the token securely.  By
 default, tokens expire after a single use or 15 minutes after
 creation.
 
-## Step 6: Deploy the application workloads
-
-This example runs the frontend on Kubernetes and the backend as
-a local Podman container.
-
-Use `kubectl create deployment` to deploy the frontend service
-in `hello-world`.
-
-Use `docker run` or `podman run` to run the backend service on
-your local machine.
-
-_**Kubernetes:**_
-
-~~~ shell
-kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
-~~~
-
-_**Podman:**_
-
-~~~ shell
-podman run --name backend-target --network skupper --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
-~~~
-
-## Step 7: Expose the backend service
-
-XXX
-
-Use `skupper service create` to define a Skupper service called
-`backend`.  Then use `skupper gateway bind` to attach your
-running backend process as a target for the service.
-
-XXX
+## Step 7: Expose the backend
 
 _**Kubernetes:**_
 
@@ -284,7 +275,7 @@ skupper service create backend 8080
 skupper service bind backend host backend-target --target-port 8080
 ~~~
 
-## Step 8: Access the application
+## Step 8: Access the frontend
 
 In order to use and test the application, we need external access
 to the frontend.
@@ -344,6 +335,7 @@ _**Podman:**_
 
 ~~~ shell
 skupper delete
+podman stop backend-target
 ~~~
 
 ## Next steps
