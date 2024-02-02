@@ -136,14 +136,14 @@ podman system service --time=0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
 
 ## Step 4: Deploy the frontend and backend
 
-This example runs the frontend on Kubernetes and the backend as
+This example runs the frontend in Kubernetes and the backend as
 a local Podman container.
 
-Use `kubectl create deployment` to deploy the frontend service
-in namespace `hello-world`.
+In Kubernetes, use `kubectl create deployment` to deploy the
+frontend service in namespace `hello-world`.
 
-Use `podman run` to start the backend service on your local
-machine.
+In Podman, use `podman run` to start the backend service on your
+local machine.
 
 _**Kubernetes:**_
 
@@ -259,6 +259,11 @@ default, tokens expire after a single use or 15 minutes after
 creation.
 
 ## Step 7: Expose the backend
+
+We now have our sites linked to form a Skupper network, but no
+services are exposed on it.  We can use the `skupper service`
+commands to expose the backend service in Podman to the frontend
+in Kubernetes.
 
 In Kubernetes, use `skupper service create` to create a service
 called `backend`.

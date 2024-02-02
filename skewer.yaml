@@ -52,14 +52,14 @@ steps:
   - standard: podman/set_up_your_podman_network
   - title: Deploy the frontend and backend
     preamble: |
-      This example runs the frontend on Kubernetes and the backend as
+      This example runs the frontend in Kubernetes and the backend as
       a local Podman container.
 
-      Use `kubectl create deployment` to deploy the frontend service
-      in namespace `hello-world`.
+      In Kubernetes, use `kubectl create deployment` to deploy the
+      frontend service in namespace `hello-world`.
 
-      Use `podman run` to start the backend service on your local
-      machine.
+      In Podman, use `podman run` to start the backend service on your
+      local machine.
     commands:
       kubernetes:
         - run: kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
@@ -100,6 +100,11 @@ steps:
   - standard: link_your_sites
   - title: Expose the backend
     preamble: |
+      We now have our sites linked to form a Skupper network, but no
+      services are exposed on it.  We can use the `skupper service`
+      commands to expose the backend service in Podman to the frontend
+      in Kubernetes.
+
       In Kubernetes, use `skupper service create` to create a service
       called `backend`.
 
