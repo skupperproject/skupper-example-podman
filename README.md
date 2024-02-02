@@ -1,7 +1,5 @@
 # Skupper Hello World using Podman
 
-[![main](https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml/badge.svg)](https://github.com/ssorj/skupper-example-podman/actions/workflows/main.yaml)
-
 #### Connect services running as Podman containers
 
 This example is part of a [suite of examples][examples] showing the

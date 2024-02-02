@@ -1,5 +1,6 @@
 title: Skupper Hello World using Podman
 subtitle: Connect services running as Podman containers
+workflow: null
 overview: |
   This example is a basic multi-service HTTP application deployed
   across a Kubernetes cluster and a bare-metal host or VM running
