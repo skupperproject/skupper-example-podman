@@ -145,6 +145,13 @@ frontend service in namespace `hello-world`.
 In Podman, use `podman run` to start the backend service on your
 local machine.
 
+**Note:** It is important to name your running container using
+`--name` to avoid a collision with the container that Skupper
+creates for accessing the service.
+
+**Note:** You must use `--network skupper` with the `podman run`
+command.
+
 _**Kubernetes:**_
 
 ~~~ shell
@@ -271,6 +278,10 @@ called `backend`.
 In Podman, use `skupper service create` to create the same
 service.  Use `skupper service bind` to attach your running
 backend process as a target for the service.
+
+**Note:** Podman sites do not automatically replicate services
+to remote sites.  You need to use `skupper service create` on
+each site where you wish to make a service available.
 
 _**Kubernetes:**_
 
