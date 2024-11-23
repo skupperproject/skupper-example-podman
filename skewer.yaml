@@ -97,28 +97,24 @@ steps:
             site.skupper.io/west condition met
       podman:
         - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -p east -f
-          output: |
-            XXX
     postamble: |
       You can use `skupper site status` at any time to check the status
       of your site.
-  - title: Sleep!
+  - title: Link your sites
     commands:
       kubernetes:
-        - run: sleep 10
-        - run: kubectl get pods
-        - run: podman ps
-        - run: sleep 86400
-  - title: Cleaning up
-    name: cleaning_up
-    numbered: false
-    preamble: |
-      To remove Skupper and the other resources from this exercise, use
-      the following commands:
+        - run: skupper link generate > link.yaml
+      podman:
+        - run: sed -i 's/v1alpha1/v2alpha1/g' link.yaml
+        - run: mv link.yaml /home/jross/.local/share/skupper/namespaces/default/input/resources/link.yaml
+        - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -f
+  - title: Expose the backend
+    commands:
+      kubernetes:
+        - run: skupper listener create backend 8080
+  - standard: hello_world/access_the_frontend
+  - standard: general/cleaning_up
     commands:
       podman:
         - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/remove.sh | sh
         - run: podman rm -f backend
-
-  # - standard: hello_world/access_the_frontend
-  # - standard: general/cleaning_up

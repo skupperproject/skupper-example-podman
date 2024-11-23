@@ -20,7 +20,10 @@ across cloud providers, data centers, and edge sites.
 * [Step 3: Install Skupper on your clusters](#step-3-install-skupper-on-your-clusters)
 * [Step 4: Deploy the frontend and backend](#step-4-deploy-the-frontend-and-backend)
 * [Step 5: Create your sites](#step-5-create-your-sites)
-* [Step 6: Sleep!](#step-6-sleep)
+* [Step 6: Link your sites](#step-6-link-your-sites)
+* [Step 7: Expose the backend](#step-7-expose-the-backend)
+* [Step 8: Access the frontend](#step-8-access-the-frontend)
+* [Cleaning up](#cleaning-up)
 * [Next steps](#next-steps)
 * [About this example](#about-this-example)
 
@@ -81,8 +84,8 @@ _**Kubernetes:**_
 
 ~~~ shell
 # Enter your provider-specific login command
-kubectl create namespace hello-world
-kubectl config set-context --current --namespace hello-world
+kubectl create namespace west
+kubectl config set-context --current --namespace west
 ~~~
 
 ## Step 2: Set up your Podman environment
@@ -132,7 +135,7 @@ This example runs the frontend in Kubernetes and the backend as
 a local Podman container.
 
 In Kubernetes, use `kubectl create deployment` to deploy the
-frontend service in namespace `hello-world`.
+frontend service in namespace `west`.
 
 In Podman, use `podman run` to start the backend service on your
 local machine.
@@ -146,7 +149,7 @@ kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
 _**Podman:**_
 
 ~~~ shell
-podman run --name backend --detach --rm -p 8080:8080 quay.io/skupper/hello-world-backend
+podman run --name backend --detach --rm -p 9090:8080 quay.io/skupper/hello-world-backend
 ~~~
 
 ## Step 5: Create your sites
@@ -172,46 +175,81 @@ tunnel][minikube-tunnel] before you run `skupper init`.
 _**Kubernetes:**_
 
 ~~~ shell
-skupper site create hello-world --enable-link-access
-kubectl wait --for condition=Ready site/hello-world  # Required with preview 1 - to be removed!
+skupper site create west --enable-link-access
+kubectl wait --for condition=Ready site/west --timeout=60s # Required with preview 1 - to be removed!
 ~~~
 
 _Sample output:_
 
 ~~~ console
-$ skupper site create hello-world --enable-link-access
+$ skupper site create west --enable-link-access
 Waiting for status...
-Site "hello-world" is configured. Check the status to see when it is ready
+Site "west" is configured. Check the status to see when it is ready
 
-$ kubectl wait --for condition=Ready site/hello-world  # Required with preview 1 - to be removed!
-site.skupper.io/hello-world condition met
+$ kubectl wait --for condition=Ready site/west --timeout=60s # Required with preview 1 - to be removed!
+site.skupper.io/west condition met
 ~~~
 
 _**Podman:**_
 
 ~~~ shell
-echo XXX
-~~~
-
-_Sample output:_
-
-~~~ console
-$ echo XXX
-XXX
+curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -p east -f
 ~~~
 
 You can use `skupper site status` at any time to check the status
 of your site.
 
-## Step 6: Sleep!
+## Step 6: Link your sites
 
 _**Kubernetes:**_
 
 ~~~ shell
-sleep 10
-kubectl get pods
-podman ps
-sleep 86400
+skupper link generate > link.yaml
+~~~
+
+_**Podman:**_
+
+~~~ shell
+sed -i 's/v1alpha1/v2alpha1/g' link.yaml
+mv link.yaml /home/jross/.local/share/skupper/namespaces/default/input/resources/link.yaml
+curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -f
+~~~
+
+## Step 7: Expose the backend
+
+_**Kubernetes:**_
+
+~~~ shell
+skupper listener create backend 8080
+~~~
+
+## Step 8: Access the frontend
+
+In order to use and test the application, we need external access
+to the frontend.
+
+Use `kubectl port-forward` to make the frontend available at
+`localhost:8080`.
+
+_**Kubernetes:**_
+
+~~~ shell
+kubectl port-forward deployment/frontend 8080:8080
+~~~
+
+You can now access the web interface by navigating to
+[http://localhost:8080](http://localhost:8080) in your browser.
+
+## Cleaning up
+
+To remove Skupper and the other resources from this exercise, use
+the following commands.
+
+_**Podman:**_
+
+~~~ shell
+curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/remove.sh | sh
+podman rm -f backend
 ~~~
 
 ## Next steps
