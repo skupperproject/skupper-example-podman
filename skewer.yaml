@@ -50,7 +50,6 @@ sites:
 steps:
   - standard: kubernetes/set_up_your_kubernetes_cluster
   - standard: podman/set_up_your_podman_environment
-  - standard: kubernetes/install_skupper_on_your_clusters
   - title: Deploy the frontend and backend
     preamble: |
       This example runs the frontend in Kubernetes and the backend as
@@ -66,25 +65,9 @@ steps:
         - run: kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
       podman:
         - run: podman run --name backend --detach --rm -p 9090:8080 quay.io/skupper/hello-world-backend
-  - title: Create your sites
-    preamble: |
-      A Skupper _site_ is a location where components of your
-      application are running.  Sites are linked together to form a
-      Skupper network for your application.
-
-      In Kubernetes, use `skupper site create` with a site name of
-      your choice.  This creates the site resource and deploys the
-      Skupper router to the namespace.
-
-      XXX In Podman, use `skupper init` with the option `--ingress none`
-      and use `skupper status` to see the result. XXX
-
-      **Note:** If you are using Minikube, you need to [start minikube
-      tunnel][minikube-tunnel] before you run `skupper init`.
-
-      <!-- XXX Explain enabling link acesss on one of the sites -->
-
-      [minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
+  - standard: kubernetes/install_skupper_on_your_cluster
+  - standard: general/install_the_skupper_command_line_tool
+  - standard: general/create_your_sites
     commands:
       kubernetes:
         - run: skupper site create west --enable-link-access
@@ -92,29 +75,52 @@ steps:
             Waiting for status...
             Site "west" is configured. Check the status to see when it is ready
         - run: |
-           kubectl wait --for condition=Ready site/west --timeout=60s # Required with preview 1 - to be removed!
+            kubectl wait --for condition=Ready site/west --timeout=60s # Required with preview 1 - to be removed!
           output: |
             site.skupper.io/west condition met
       podman:
-        - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -p east -f
-    postamble: |
-      You can use `skupper site status` at any time to check the status
-      of your site.
-  - title: Link your sites
+        - run: |
+            curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -p east -f
+            #
+            # skupper site create east
+            # skupper system reload
+  - standard: general/link_your_sites
     commands:
       kubernetes:
         - run: skupper link generate > link.yaml
+        - run: |
+            #
+            # skupper token issue ~/secret.token
       podman:
         - run: sed -i 's/v1alpha1/v2alpha1/g' link.yaml
         - run: mv link.yaml /home/jross/.local/share/skupper/namespaces/default/input/resources/link.yaml
         - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -f
-  - title: Expose the backend
+        - run: |
+            #
+            # skupper token redeem ~/secret.token
+            # skupper system reload
+  - standard: hello_world/expose_the_backend
     commands:
       kubernetes:
         - run: skupper listener create backend 8080
+      podman:
+        - run: |
+            # skupper connector create backend --host 127.0.0.1 --port 9090
+            # skupper system reload
+    postamble: |
+      The commands shown above use the name argument, `backend`, to
+      also set the default routing key.  You can use the
+      `--routing-key` option to specify another value.
   - standard: hello_world/access_the_frontend
   - standard: general/cleaning_up
     commands:
+      kubernetes:
+        - run: |
+            # skupper site delete --all
       podman:
         - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/remove.sh | sh
         - run: podman rm -f backend
+        - run: |
+            #
+            # skupper site delete --all
+            # podman rm -f backend
