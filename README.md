@@ -18,12 +18,13 @@ across cloud providers, data centers, and edge sites.
 * [Step 1: Set up your Kubernetes cluster](#step-1-set-up-your-kubernetes-cluster)
 * [Step 2: Set up your Podman environment](#step-2-set-up-your-podman-environment)
 * [Step 3: Deploy the frontend and backend](#step-3-deploy-the-frontend-and-backend)
-* [Step 4: Install Skupper on your cluster](#step-4-install-skupper-on-your-cluster)
-* [Step 5: Install the Skupper command-line tool](#step-5-install-the-skupper-command-line-tool)
-* [Step 6: Create your sites](#step-6-create-your-sites)
-* [Step 7: Link your sites](#step-7-link-your-sites)
-* [Step 8: Expose the backend](#step-8-expose-the-backend)
-* [Step 9: Access the frontend](#step-9-access-the-frontend)
+* [Step 4: Install the Skupper command-line tool](#step-4-install-the-skupper-command-line-tool)
+* [Step 5: Install Skupper on your Kubernetes cluster](#step-5-install-skupper-on-your-kubernetes-cluster)
+* [Step 6: Install Skupper in your Podman environment](#step-6-install-skupper-in-your-podman-environment)
+* [Step 7: Create your sites](#step-7-create-your-sites)
+* [Step 8: Link your sites](#step-8-link-your-sites)
+* [Step 9: Expose the backend service](#step-9-expose-the-backend-service)
+* [Step 10: Access the frontend service](#step-10-access-the-frontend-service)
 * [Cleaning up](#cleaning-up)
 * [Next steps](#next-steps)
 * [About this example](#about-this-example)
@@ -101,14 +102,6 @@ _**Podman:**_
 
 ~~~ shell
 export SKUPPER_PLATFORM=podman
-systemctl --user enable --now podman.socket
-~~~
-
-If the `systemctl` command doesn't work, you can try the `podman
-system service` command instead:
-
-~~~
-podman system service --time 0 unix://$XDG_RUNTIME_DIR/podman/podman.sock &
 ~~~
 
 ## Step 3: Deploy the frontend and backend
@@ -134,22 +127,7 @@ _**Podman:**_
 podman run --name backend --detach --rm -p 9090:8080 quay.io/skupper/hello-world-backend
 ~~~
 
-## Step 4: Install Skupper on your cluster
-
-Using Skupper on Kubernetes requires the installation of the
-Skupper custom resource definitions (CRDs) and the Skupper
-controller.
-
-Use `kubectl apply` with the Skupper installation YAML to install
-the CRDs and controller.
-
-_**Kubernetes:**_
-
-~~~ shell
-kubectl apply -f https://skupper.io/v2/install.yaml
-~~~
-
-## Step 5: Install the Skupper command-line tool
+## Step 4: Install the Skupper command-line tool
 
 This example uses the Skupper command-line tool to create Skupper
 resources.  You need to install the `skupper` command only once
@@ -159,7 +137,7 @@ On Linux or Mac, you can use the install script (inspect it
 [here][install-script]) to download and extract the command:
 
 ~~~ shell
-curl https://skupper.io/install.sh | sh -s -- --version 2.0.0-preview-1
+curl https://skupper.io/install.sh | sh -s -- --version 2.0.0-preview-2
 ~~~
 
 The script installs the command under your home directory.  It
@@ -171,11 +149,38 @@ Skupper][install-docs].
 [install-script]: https://github.com/skupperproject/skupper-website/blob/main/input/install.sh
 [install-docs]: https://skupper.io/install/
 
-## Step 6: Create your sites
+## Step 5: Install Skupper on your Kubernetes cluster
 
-A Skupper _site_ is a location where components of your
-application are running.  Sites are linked together to form a
-network for your application.
+Using Skupper on Kubernetes requires the installation of the
+Skupper custom resource definitions (CRDs) and the Skupper
+controller.
+
+Use `kubectl apply` with the Skupper installation YAML to install
+the CRDs and controller.
+
+_**Kubernetes:**_
+
+~~~ shell
+kubectl apply -f https://github.com/skupperproject/skupper/releases/download/2.0.0-preview-2/skupper-setup-cluster-scope.yaml
+~~~
+
+## Step 6: Install Skupper in your Podman environment
+
+_**Podman:**_
+
+~~~ shell
+# Current:
+systemctl --user enable --now podman.socket
+# Want:
+# skupper system install
+# skupper system start
+~~~
+
+## Step 7: Create your sites
+
+A Skupper _site_ is a location where your application workloads
+are running.  Sites are linked together to form a network for your
+application.
 
 For each namespace, use `skupper site create` with a site name of
 your choice.  This creates the site resource and deploys the
@@ -191,90 +196,64 @@ tunnel][minikube-tunnel] before you run `skupper site create`.
 _**Kubernetes:**_
 
 ~~~ shell
-skupper site create west --enable-link-access
-kubectl wait --for condition=Ready site/west --timeout=60s # Required with preview 1 - to be removed!
+skupper site create west --enable-link-access --timeout 2m
 ~~~
 
 _Sample output:_
 
 ~~~ console
-$ skupper site create west --enable-link-access
+$ skupper site create west --enable-link-access --timeout 2m
 Waiting for status...
 Site "west" is configured. Check the status to see when it is ready
-
-$ kubectl wait --for condition=Ready site/west --timeout=60s # Required with preview 1 - to be removed!
-site.skupper.io/west condition met
 ~~~
 
 _**Podman:**_
 
 ~~~ shell
-curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -p east -f
-#
-# skupper site create east
+skupper site create east
+# Current:
+skupper system setup
+# Want:
 # skupper system reload
 ~~~
 
-You can use `skupper site status` at any time to check the status
-of your site.
-
-## Step 7: Link your sites
+## Step 8: Link your sites
 
 A Skupper _link_ is a channel for communication between two sites.
 Links serve as a transport for application connections and
 requests.
 
-Creating a link requires use of two `skupper` commands in
-conjunction, `skupper token issue` and `skupper token redeem`.
-
-The `skupper token issue` command generates a secret token that
-signifies permission to create a link.  The token also carries the
-link details.  Then, in a remote site, The `skupper token redeem`
-command uses the token to create a link to the site that generated
-it.
-
-**Note:** The link token is truly a *secret*.  Anyone who has the
-token can link to your site.  Make sure that only those you trust
-have access to it.
-
-First, use `skupper token issue` in Kubernetes to generate the token.
-Then, use `skupper token redeem` in Podman to link the sites.
-
 _**Kubernetes:**_
 
 ~~~ shell
+# Current:
 skupper link generate > link.yaml
-#
+# Want:
 # skupper token issue ~/secret.token
 ~~~
 
 _**Podman:**_
 
 ~~~ shell
-sed -i 's/v1alpha1/v2alpha1/g' link.yaml
+# Current:
 mv link.yaml /home/jross/.local/share/skupper/namespaces/default/input/resources/link.yaml
-curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -f
-#
+# Want:
 # skupper token redeem ~/secret.token
-# skupper system reload
+skupper system reload
 ~~~
 
-If your terminal sessions are on different machines, you may need
-to use `scp` or a similar tool to transfer the token securely.  By
-default, tokens expire after a single use or 15 minutes after
-being issued.
-
-## Step 8: Expose the backend
+## Step 9: Expose the backend service
 
 We now have our sites linked to form a Skupper network, but no
 services are exposed on it.
 
-Skupper uses _listeners_ and _connectors_ to expose services.  A
-listener is a local endpoint for client connections, configured
-with a routing key.  A connector exists in a remote site and binds
-a routing key to a particular set of servers.  Skupper routers
-forward client connections from local listeners to remote
-connectors with matching routing keys.
+Skupper uses _listeners_ and _connectors_ to expose services
+across sites inside a Skupper network.  A listener is a local
+endpoint for client connections, configured with a routing key.  A
+connector exists in a remote site and binds a routing key to a
+particular set of servers.  Skupper routers forward client
+connections from local listeners to remote connectors with
+matching routing keys.
 
 In Kubernetes, use the `skupper listener create` command to create a
 listener for the backend.  In Podman, use the `skupper connector
@@ -289,15 +268,18 @@ skupper listener create backend 8080
 _**Podman:**_
 
 ~~~ shell
-# skupper connector create backend --host 127.0.0.1 --port 9090
-# skupper system reload
+# Current:
+skupper connector create backend 9090 --host localhost
+# Want:
+# skupper connector create backend 9090
+skupper system reload
 ~~~
 
 The commands shown above use the name argument, `backend`, to
 also set the default routing key.  You can use the
 `--routing-key` option to specify another value.
 
-## Step 9: Access the frontend
+## Step 10: Access the frontend service
 
 In order to use and test the application, we need external access
 to the frontend.
@@ -322,17 +304,14 @@ the following commands.
 _**Kubernetes:**_
 
 ~~~ shell
-# skupper site delete --all
+skupper site delete --all
 ~~~
 
 _**Podman:**_
 
 ~~~ shell
-curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/remove.sh | sh
+skupper site delete --all
 podman rm -f backend
-#
-# skupper site delete --all
-# podman rm -f backend
 ~~~
 
 ## Next steps

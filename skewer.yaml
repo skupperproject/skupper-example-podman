@@ -48,8 +48,17 @@ sites:
     env:
       SKUPPER_PLATFORM: podman
 steps:
-  - standard: kubernetes/set_up_your_kubernetes_cluster
-  - standard: podman/set_up_your_podman_environment
+  - standard: platform/set_up_your_kubernetes_cluster
+  - title: Set up your Podman environment
+    preamble: |
+      Open a new terminal window and set the `SKUPPER_PLATFORM`
+      environment variable to `podman`.  This sets the Skupper platform
+      to Podman for this terminal session.
+
+      Use `systemctl` to enable the Podman API service.
+    commands:
+      podman:
+        - run: export SKUPPER_PLATFORM=podman
   - title: Deploy the frontend and backend
     preamble: |
       This example runs the frontend in Kubernetes and the backend as
@@ -65,62 +74,85 @@ steps:
         - run: kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
       podman:
         - run: podman run --name backend --detach --rm -p 9090:8080 quay.io/skupper/hello-world-backend
-  - standard: kubernetes/install_skupper_on_your_cluster
-  - standard: general/install_the_skupper_command_line_tool
-  - standard: general/create_your_sites
+  - standard: platform/install_the_skupper_command_line_tool
+  - standard: platform/install_skupper_on_your_kubernetes_cluster
+  - title: Install Skupper in your Podman environment
+    commands:
+      podman:
+        - run: |
+            # Current:
+            systemctl --user enable --now podman.socket
+            # Want:
+            # skupper system install
+            # skupper system start
+  - title: Create your sites
+    preamble: |
+      A Skupper _site_ is a location where your application workloads
+      are running.  Sites are linked together to form a network for your
+      application.
+
+      For each namespace, use `skupper site create` with a site name of
+      your choice.  This creates the site resource and deploys the
+      Skupper router to the namespace.
+
+      **Note:** If you are using Minikube, you need to [start minikube
+      tunnel][minikube-tunnel] before you run `skupper site create`.
+
+      <!-- XXX Explain enabling link acesss on one of the sites -->
+
+      [minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
     commands:
       kubernetes:
-        - run: skupper site create west --enable-link-access
+        - run: skupper site create west --enable-link-access --timeout 2m
           output: |
             Waiting for status...
             Site "west" is configured. Check the status to see when it is ready
-        - run: |
-            kubectl wait --for condition=Ready site/west --timeout=60s # Required with preview 1 - to be removed!
-          output: |
-            site.skupper.io/west condition met
       podman:
+        - run: skupper site create east
         - run: |
-            curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -p east -f
-            #
-            # skupper site create east
+            # Current:
+            skupper system setup
+            # Want:
             # skupper system reload
-  - standard: general/link_your_sites
+  - title: Link your sites
+    preamble: |
+      A Skupper _link_ is a channel for communication between two sites.
+      Links serve as a transport for application connections and
+      requests.
     commands:
       kubernetes:
-        - run: skupper link generate > link.yaml
         - run: |
-            #
+            # Current:
+            skupper link generate > link.yaml
+            # Want:
             # skupper token issue ~/secret.token
       podman:
-        - run: sed -i 's/v1alpha1/v2alpha1/g' link.yaml
-        - run: mv link.yaml /home/jross/.local/share/skupper/namespaces/default/input/resources/link.yaml
-        - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/bootstrap.sh | SKUPPER_PLATFORM=podman sh -s -- -f
         - run: |
-            #
+            # Current:
+            mv link.yaml /home/jross/.local/share/skupper/namespaces/default/input/resources/link.yaml
+            # Want:
             # skupper token redeem ~/secret.token
-            # skupper system reload
-  - standard: hello_world/expose_the_backend
+        - run: skupper system reload
+  - standard: hello_world/expose_the_backend_service/kubernetes_cli
     commands:
       kubernetes:
         - run: skupper listener create backend 8080
       podman:
         - run: |
-            # skupper connector create backend --host 127.0.0.1 --port 9090
-            # skupper system reload
+            # Current:
+            skupper connector create backend 9090 --host localhost
+            # Want:
+            # skupper connector create backend 9090
+        - run: skupper system reload
     postamble: |
       The commands shown above use the name argument, `backend`, to
       also set the default routing key.  You can use the
       `--routing-key` option to specify another value.
-  - standard: hello_world/access_the_frontend
-  - standard: general/cleaning_up
+  - standard: hello_world/access_the_frontend_service/kubernetes_cli
+  - standard: skupper/cleaning_up/kubernetes_cli
     commands:
       kubernetes:
-        - run: |
-            # skupper site delete --all
+        - run: skupper site delete --all
       podman:
-        - run: curl https://raw.githubusercontent.com/skupperproject/skupper/refs/heads/v2/cmd/bootstrap/remove.sh | sh
+        - run: skupper site delete --all
         - run: podman rm -f backend
-        - run: |
-            #
-            # skupper site delete --all
-            # podman rm -f backend
