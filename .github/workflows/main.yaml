@@ -29,13 +29,17 @@ jobs:
       fail-fast: false
       matrix:
         skupper-version: [2.0.0-rc1]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-      - uses: medyagh/setup-minikube@latest
+      - uses: manusa/setup-minikube@latest
+        with:
+          minikube version: 'v1.35.0'
+          kubernetes version: 'v1.32.2'
+          github token: ${{ secrets.GITHUB_TOKEN }}
       - run: curl https://skupper.io/install.sh | bash -s -- --version ${{matrix.skupper-version}}
       - run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - run: ./plano test
