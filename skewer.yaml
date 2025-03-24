@@ -21,32 +21,6 @@ overview: |
   internet.
 
   <!-- <img src="images/entities.svg" width="640"/> -->
-prerequisites: |
-  * Access to a Kubernetes cluster, from [any provider you
-    choose][kube-providers]
-
-  * A working installation of Podman ([installation
-    guide][install-podman])
-
-  * The `kubectl` command-line tool, version 1.15 or later
-    ([installation guide][install-kubectl])
-
-  * The `skupper` command-line tool, version 2.0 or later.  On Linux
-    or Mac, you can use the install script (inspect it
-    [here][cli-install-script]) to download and extract the command:
-
-    ~~~ shell
-    curl https://skupper.io/install.sh | sh -s -- --version 2.0.0-preview-2
-    ~~~
-
-    See [Installing the Skupper CLI][cli-install-docs] for more
-    information.
-
-  [kube-providers]: https://skupper.io/start/kubernetes.html
-  [install-podman]: https://podman.io/getting-started/installation
-  [install-kubectl]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
-  [cli-install-script]: https://github.com/skupperproject/skupper-website/blob/main/input/install.sh
-  [cli-install-docs]: https://skupper.io/install/
 sites:
   kubernetes:
     title: Kubernetes
@@ -62,22 +36,9 @@ sites:
       SKUPPER_PLATFORM: podman
 steps:
   - standard: platform/access_your_kubernetes_cluster
+  - standard: platform/create_your_kubernetes_namespace
+  - standard: platform/set_up_your_podman_environment
   - standard: platform/install_skupper_on_your_kubernetes_cluster
-  - title: Set up your Podman environment
-    preamble: |
-      Open a new terminal window and set the `SKUPPER_PLATFORM`
-      environment variable to `podman`.  This sets the Skupper platform
-      to Podman for this terminal session.
-
-    # Use `skupper system install` to configure the local environment
-    # for Skupper.
-    commands:
-      podman:
-        - run: export SKUPPER_PLATFORM=podman
-        # - run: skupper system install
-        #   apply: readme
-        - run: systemctl --user enable --now podman.socket
-        # apply: test
   - title: Deploy the frontend and backend
     preamble: |
       This example runs the frontend in Kubernetes and the backend as
@@ -93,11 +54,6 @@ steps:
       local machine.
     commands:
       kubernetes:
-        - run: kubectl create namespace west
-          apply: readme
-        - run: kubectl create namespace west --dry-run=client -o yaml | kubectl apply -f -
-          apply: test
-        - run: kubectl config set-context --current --namespace west
         - run: kubectl create deployment frontend --image quay.io/skupper/hello-world-frontend
       podman:
         - run: podman run --name backend --detach --rm -p 9090:8080 quay.io/skupper/hello-world-backend
@@ -119,7 +75,7 @@ steps:
       [minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
     commands:
       kubernetes:
-        - run: skupper site create west --enable-link-access --timeout 2m
+        - run: skupper site create west --enable-link-access
           output: |
             Waiting for status...
             Site "west" is configured. Check the status to see when it is ready
@@ -135,8 +91,8 @@ steps:
         - run: skupper link generate > link.yaml
       podman:
         - run: |
-            mkdir -p ~/.local/share/skupper/namespaces/default/input/resources
-            mv link.yaml ~/.local/share/skupper/namespaces/default/input/resources/link.yaml
+            mkdir -p $HOME/.local/share/skupper/namespaces/default/input/resources
+            mv link.yaml $HOME/.local/share/skupper/namespaces/default/input/resources/link.yaml
   - standard: hello_world/expose_the_backend_service/kubernetes_cli
     commands:
       kubernetes:
@@ -157,4 +113,5 @@ steps:
         - run: kubectl delete deployment/frontend
       podman:
         - run: skupper site delete --all
+        - run: skupper system stop
         - run: podman rm -f backend
