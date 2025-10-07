@@ -223,6 +223,10 @@ A Skupper _link_ is a channel for communication between two sites.
 Links serve as a transport for application connections and
 requests.
 
+> **Note:** When working with system sites, we recommend using a Link resource to
+connect sites, since AccessTokens have a limited lifetime and usage count, which
+may affect site reloads.
+
 _**Kubernetes:**_
 
 ~~~ shell
