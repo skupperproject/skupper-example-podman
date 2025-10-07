@@ -50,6 +50,8 @@ machine and the frontend in Kubernetes and maintain connectivity
 between the two services without exposing the backend to the public
 internet.
 
+> **Note:** This example is intended to be run on a Linux machine.
+
 <!-- <img src="images/entities.svg" width="640"/> -->
 
 ## Prerequisites

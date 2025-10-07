@@ -20,6 +20,8 @@ overview: |
   between the two services without exposing the backend to the public
   internet.
 
+  > **Note:** This example is intended to be run on a Linux machine.
+
   <!-- <img src="images/entities.svg" width="640"/> -->
 sites:
   kubernetes:
