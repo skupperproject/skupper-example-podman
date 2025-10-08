@@ -85,7 +85,7 @@ For Windows and other installation options, see [Installing
 Skupper][install-docs].
 
 [install-script]: https://github.com/skupperproject/skupper-website/blob/main/input/install.sh
-[install-docs]: https://skupper.io/install/
+[install-docs]: https://skupper.io/#installation
 
 ## Step 2: Access your Kubernetes cluster
 
