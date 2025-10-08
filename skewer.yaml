@@ -20,6 +20,8 @@ overview: |
   between the two services without exposing the backend to the public
   internet.
 
+  > **Note:** This example is intended to be run on a Linux machine.
+
   <!-- <img src="images/entities.svg" width="640"/> -->
 sites:
   kubernetes:
@@ -35,6 +37,7 @@ sites:
     env:
       SKUPPER_PLATFORM: podman
 steps:
+  - standard: platform/install_the_skupper_command_line_tool
   - standard: platform/access_your_kubernetes_cluster
   - standard: platform/create_your_kubernetes_namespace
   - standard: platform/set_up_your_podman_environment
@@ -86,25 +89,28 @@ steps:
       A Skupper _link_ is a channel for communication between two sites.
       Links serve as a transport for application connections and
       requests.
+
+      > **Note:** When working with system sites, we recommend using a Link resource to
+      connect sites, since AccessTokens have a limited lifetime and usage count, which
+      may affect site reloads.
     commands:
       kubernetes:
         - run: skupper link generate > link.yaml
       podman:
         - run: |
-            mkdir -p $HOME/.local/share/skupper/namespaces/default/input/resources
-            mv link.yaml $HOME/.local/share/skupper/namespaces/default/input/resources/link.yaml
+            skupper system apply -f link.yaml
   - standard: hello_world/expose_the_backend_service/kubernetes_cli
     commands:
       kubernetes:
         - run: skupper listener create backend 8080
       podman:
-        - run: skupper connector create backend 9090 --host localhost
+        - run: skupper connector create backend 9090 --host 127.0.0.1
   - title: Start the Podman site
     preamble: |
       This applies all the Podman site config you've added.
     commands:
       podman:
-        - run: skupper system setup --force
+        - run: skupper system start
   - standard: hello_world/access_the_frontend_service/kubernetes_cli
   - standard: skupper/cleaning_up/kubernetes_cli
     commands:
